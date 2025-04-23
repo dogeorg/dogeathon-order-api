@@ -23,11 +23,11 @@ $config['payout_address'] = 'Dxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; // Dogecoin payout 
 $config['dbHost'] = 'localhost';
 $config['dbUser'] = 'suchuser';
 $config['dbPass'] = 'suchpass';
-$config['dbName'] = 'dogebox';
+$config['dbName'] = 'dogeathon';
 $config['dbPort'] = 3306;
 
 // SMTP Email Server Configuration
-$config['email_name_from'] = 'DogeBox'; // name to show on all emails sent
+$config['email_name_from'] = 'Dogeathon Portugal'; // name to show on all emails sent
 $config['email_from'] = 'no-reply@localhost'; // email to show and reply on all emails sent
 $config['email_reply_to'] = 'no-reply@localhost'; // email to reply
 $config['email_port'] = 465; // SSL 465 / TLS 587
