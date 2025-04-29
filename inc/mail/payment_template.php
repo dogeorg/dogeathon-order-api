@@ -1,6 +1,6 @@
 <?php
 
-$logo = "<img src='".$this->config["orderHost"]."img/dogeathon-email.png' style='width:100%; max-width: 150px' alet='dogeathon' />";
+$logo = "<img src='".$this->config["orderHost"]."img/dogeathon-email.png' style='width:100%;' alet='dogeathon' />";
 $mail_subject = "Much Wow! Dogeathon Payment Fee Confirmed!";
 
 $mail_message = <<<EOD
@@ -15,7 +15,7 @@ $mail_message = <<<EOD
             padding: 0;
             background-color: rgb(20, 22, 24);
             font-family:  'Comic Sans MS', 'Comic Sans', cursive;
-            color: white;
+            color: #ffffff !important;
         }
         .email-container {
             width: 100%;

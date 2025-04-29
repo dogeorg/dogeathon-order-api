@@ -130,20 +130,80 @@ class GigaWalletBridge {
 
     // Insert Shibe
     public function insertShibe($name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress) {
-        $conn = $this->getDbConnection();
-        $paid = 0;
-        $stmt = $conn->prepare("INSERT INTO shibes (name, email, country, github, x, dogeAddress, amount, PaytoDogeAddress, paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssssssss", $name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress, $paid);
-    
-        $stmt->execute();    
-        $stmt->close();
-        $conn->close();
+        try {
+            $conn = $this->getDbConnection();
+            
+            // First check if the table exists
+            $tableCheck = $conn->query("SHOW TABLES LIKE 'shibes'");
+            if ($tableCheck->num_rows == 0) {
+                // Create the table if it doesn't exist
+                $createTable = "CREATE TABLE shibes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255),
+                    email VARCHAR(255),
+                    country VARCHAR(255),
+                    github VARCHAR(255),
+                    x VARCHAR(255),
+                    dogeAddress VARCHAR(255),
+                    amount DECIMAL(20,8),
+                    paytoDogeAddress VARCHAR(255),
+                    paid TINYINT(1) DEFAULT 0,
+                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )";
+                
+                if (!$conn->query($createTable)) {
+                    throw new Exception("Error creating table: " . $conn->error);
+                }
+            }
 
-        // We include the email order template
-        include("../mail/order_template.php");
-        
-        $this->mailx($email,$this->config["email_from"],$this->config["email_name_from"],$this->config["email_username"],$this->config["email_password"],$this->config["email_port"],$this->config["email_stmp"],$mail_subject,$mail_message);    
+            $sql = "INSERT INTO shibes (name, email, country, github, x, dogeAddress, amount, paytoDogeAddress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            
+            // Prepare the statement
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                throw new Exception("Error preparing statement: " . $conn->error);
+            }
 
+            // Bind parameters
+            $stmt->bind_param("ssssssds", $name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress);
+            
+            // Execute the statement
+            $result = $stmt->execute();
+            if ($result === false) {
+                throw new Exception("Error executing statement: " . $stmt->error);
+            }
+
+            // Close statement and connection
+            $stmt->close();
+            $conn->close();
+
+            // Send email
+            try {
+                include("../mail/order_template.php");
+                $emailResult = $this->mailx(
+                    $email,
+                    $this->config["email_from"],
+                    $this->config["email_name_from"],
+                    $this->config["email_username"],
+                    $this->config["email_password"],
+                    $this->config["email_port"],
+                    $this->config["email_stmp"],
+                    $mail_subject,
+                    $mail_message
+                );
+                
+                if ($emailResult === "Error") {
+                    error_log("Failed to send email to: " . $email);
+                }
+            } catch (Exception $e) {
+                error_log("Email error: " . $e->getMessage());
+            }
+
+            return $result;
+        } catch (Exception $e) {
+            error_log("Error in insertShibe: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     // Update Dogecoin Payment on Shibe
@@ -346,66 +406,153 @@ public function mailx($email_to,$email_from,$email_from_name,$email_username,$em
      }
   return null;
   }    
+/*
+    public function createOrder($name, $email, $country, $github, $dogeAddress, $amount, $paytoDogeAddress) {
+        $this->insertShibe($name, $email, $country, $github, null, $dogeAddress, $amount, $paytoDogeAddress);
+        return $this->createPayment($amount, $paytoDogeAddress);
+    }
+
+    private function createPayment($amount, $paytoDogeAddress) {
+        $conn = $this->getDbConnection();
+        $sql = "INSERT INTO payments (amount, address, status) VALUES (?, ?, 'pending')";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ds", $amount, $paytoDogeAddress);
+        $stmt->execute();
+        $paymentId = $stmt->insert_id;
+        $stmt->close();
+        $conn->close();
+        return $paymentId;
+    }
+*/        
 
 }
 
 $G = new GigaWalletBridge($config);
 
-if (!isset($config["tests"])){
-    // Check if the request method is POST
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-        // Read the raw POST data from the request body
-        $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, true); // Decode the JSON request to an associative array
-
-        // Initialize an empty response array
-        $response = array();
-
-        // Check if 'dogeAddress' is set and get its value
-        if (isset($input['dogeAddress'])) {
-            $dogeAddress = htmlspecialchars($input['dogeAddress']); // Sanitize the input
-        } else {
-            $response['error'] = 'Doge Address not provided';
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        // Get JSON input
+        $rawInput = file_get_contents('php://input');
+        error_log("Raw input: " . $rawInput);
+        
+        $input = json_decode($rawInput, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid JSON input: ' . json_last_error_msg());
+        }
+        
+        if (!$input) {
+            throw new Exception('Empty input data');
         }
 
-        if (!isset($response['error'])) {
-            // Create Account
-            $foreign_id = $dogeAddress;
-            $GigaAccountCreate = json_decode($G->account($foreign_id, $config["payout_address"], 0, 0, "POST")); // create shibe
+        // Log received data
+        error_log("Received data: " . print_r($input, true));
 
-            // Get Account
-            $GigaAccountGet = json_decode($G->account($foreign_id, NULL, NULL, NULL, "GET"));
-            //$amount = 1; // only to test gigawallet
-            // Create Invoice
-            $data["required_confirmations"] = 1; // number of confirmations to validate payment
-            $i = 0; // item number 0
-            $data["items"][$i]["type"] = "item"; // item type (item/tax/fee/shipping/discount/donation)
-            $data["items"][$i]["name"] = $input['sku']; // item name
-            $data["items"][$i]["sku"] = $input['sku']; // item sku
-            $data["items"][$i]["value"] = (float)$config["fee"]; // item value
-            $data["items"][$i]["quantity"] = 1; // item quantity
-
-            $GigaInvoiceCreate = json_decode($G->invoice($GigaAccountGet->foreign_id, $data)); // create invoice
-
-            // Get invoice
-            $GigaInvoiceGet = json_decode($G->GetInvoice($GigaAccountGet->foreign_id, $GigaInvoiceCreate->id));
-            $response['PaytoDogeAddress'] = $GigaInvoiceCreate->id;
-
-            // Insert Shibe
-            $G->insertShibe($input['name'], $input['email'], $input['country'], $input['address'], $input['postalCode'], $input['dogeAddress'], $input['size'], $input['bname'], $input['bemail'], $input['bcountry'], $input['baddress'], $input['bpostalCode'], (float)$amount, $response['PaytoDogeAddress'], $input['sku']);
-
-            // Get QR
-            $GigaQR = base64_encode($G->qr($GigaInvoiceGet->id, "000000", "ffffff"));
-            $response['GigaQR'] = '<a href="dogecoin:' . $response['PaytoDogeAddress'] . '?amount=' . (float)$amount . '" target="_blank"><doge-qr address="' . $response['PaytoDogeAddress'] . '" amount=' . (float)$amount . ' theme="such-doge"></doge-qr></a>';
+        // Validate required fields
+        $requiredFields = ['name', 'email', 'country', 'dogeAddress', 'amount'];
+        foreach ($requiredFields as $field) {
+            if (!isset($input[$field]) || empty($input[$field])) {
+                throw new Exception("Missing required field: $field");
+            }
         }
 
-        // Send a JSON response
+        // Create Account
+        $foreign_id = $input['dogeAddress'];
+        error_log("Creating account for: " . $foreign_id);
+        
+        $GigaAccountCreate = json_decode($G->account($foreign_id, $config["payout_address"], 0, 0, "POST"));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Error creating account: ' . json_last_error_msg());
+        }
+        error_log("Account create response: " . print_r($GigaAccountCreate, true));
+
+        // Get Account
+        $GigaAccountGet = json_decode($G->account($foreign_id, NULL, NULL, NULL, "GET"));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Error getting account: ' . json_last_error_msg());
+        }
+        error_log("Account get response: " . print_r($GigaAccountGet, true));
+
+        // Create Invoice
+        $data = [
+            "required_confirmations" => 1,
+            "items" => [
+                [
+                    "type" => "item",
+                    "name" => $input['sku'] ?? 'dogeathon-2025',
+                    "sku" => $input['sku'] ?? 'dogeathon-2025',
+                    "value" => (float)$input['amount'],
+                    "quantity" => 1
+                ]
+            ]
+        ];
+        error_log("Creating invoice with data: " . print_r($data, true));
+
+        $GigaInvoiceCreate = json_decode($G->invoice($GigaAccountGet->foreign_id, $data));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Error creating invoice: ' . json_last_error_msg());
+        }
+        error_log("Invoice create response: " . print_r($GigaInvoiceCreate, true));
+
+        // Get invoice
+        $GigaInvoiceGet = json_decode($G->GetInvoice($GigaAccountGet->foreign_id, $GigaInvoiceCreate->id));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Error getting invoice: ' . json_last_error_msg());
+        }
+        error_log("Invoice get response: " . print_r($GigaInvoiceGet, true));
+
+        // Insert Shibe
+        $insertResult = $G->insertShibe(
+            $input['name'],
+            $input['email'],
+            $input['country'],
+            $input['github'] ?? null,
+            null,
+            $input['dogeAddress'],
+            (float)$input['amount'],
+            $GigaInvoiceCreate->id
+        );
+        error_log("Insert shibe result: " . ($insertResult ? 'success' : 'failed'));
+
+        // Get QR
+        $GigaQR = base64_encode($G->qr($GigaInvoiceGet->id, "000000", "ffffff"));
+        error_log("QR code generated successfully");
+
+        // Prepare response
+        $response = [
+            'success' => true,
+            'GigaQR' => $GigaQR,
+            'PaytoDogeAddress' => $GigaInvoiceCreate->id
+        ];
+
+        // Send response
         header('Content-Type: application/json');
         echo json_encode($response);
-    } else {
-        // Respond with an error if the request method is not POST
+
+    } catch (Exception $e) {
+        // Log error with stack trace
+        error_log("GigaWallet API Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        
+        // Send error response
+        header('HTTP/1.1 500 Internal Server Error');
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'Invalid request method']);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'details' => $e->getTraceAsString()
+        ]);
     }
+} else {
+    // Send error for non-POST requests
+    header('HTTP/1.1 405 Method Not Allowed');
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'error' => 'Only POST requests are allowed'
+    ]);
 }
