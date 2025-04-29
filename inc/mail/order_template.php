@@ -42,7 +42,7 @@ $mail_message = <<<EOD
         <!-- Email body with white text -->
         <div class="email-body">
             <h2>Hello $name</h2>
-            Thank you for your registration at <b>Dogeathon Portrugal</b>.
+            Thank you for your registration at <b>Dogeathon Portugal</b>.
             <br><br>
             Please make a total payment fee of
             <b>Ð $amount</b> to the Dogecoin address <b>$paytoDogeAddress</b>
