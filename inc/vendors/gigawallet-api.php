@@ -512,7 +512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input['email'],
             $input['country'],
             $input['github'] ?? null,
-            null,
+            $input['x'] ?? null,
             $input['dogeAddress'],
             (float)$input['amount'],
             $GigaInvoiceCreate->id
