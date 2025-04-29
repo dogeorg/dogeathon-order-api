@@ -89,11 +89,11 @@ if (typeof jQuery === 'undefined') {
                     $('.w-form-fail').hide();
                     
                     // Show QR code and payment address in modal
-                    $('#modal-vote-success .qr-code').attr('src', 'data:image/png;base64,' + response.GigaQR);
+                    $('#modal-fee-success .qr-code').attr('src', 'data:image/png;base64,' + response.GigaQR);
                     $('#payment-address').val(response.PaytoDogeAddress);
                     
                     // Show the modal immediately
-                    $('#modal-vote-success').show();
+                    $('#modal-fee-success').show();
                 } else {
                     console.error('Invalid response format:', response);
                     throw new Error('Invalid response format from server');
@@ -132,7 +132,7 @@ if (typeof jQuery === 'undefined') {
         // Modal close logic
         $('.modal-close').on('click', function (e) {
             e.preventDefault();
-            $('#modal-vote-success').fadeOut();
+            $('#modal-fee-success').fadeOut();
         });
     });
 }
