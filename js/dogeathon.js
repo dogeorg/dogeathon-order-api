@@ -88,7 +88,7 @@ if (typeof jQuery === 'undefined') {
                     
                     // Show success message
                     $('.w-form-done').show();
-                    $('.w-form-fail').hide();
+                    $('.w-form-error').hide();
                     
                     // Show QR code and payment address in modal
                     $('#modal-fee-success .qr-code').attr('src', 'data:image/png;base64,' + response.GigaQR);
@@ -124,7 +124,7 @@ if (typeof jQuery === 'undefined') {
                 
                 // Show error message
                 $('.w-form-done').hide();
-                $('.w-form-fail').show().find('div').text(errorMessage);
+                $('.w-form-error').show().find('div').text(errorMessage);
                 
                 // Re-enable the submit button
                 $('#submit-button').prop('disabled', false).text('Register Now');
