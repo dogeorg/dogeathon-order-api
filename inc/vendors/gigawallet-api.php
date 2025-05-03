@@ -152,7 +152,7 @@ class GigaWalletBridge {
     }
 
     // Insert Shibe
-    public function insertShibe($name, $email, $attendance, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress, $attendance = null) {
+    public function insertShibe($name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress, $attendance = null) {
         try {
             $conn = $this->getDbConnection();
             
@@ -478,7 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Received data: " . print_r($input, true));
 
         // Validate required fields
-        $requiredFields = ['name', 'email', 'attendance ', 'country', 'dogeAddress', 'amount'];
+        $requiredFields = ['name', 'email', 'attendance', 'country', 'dogeAddress', 'amount'];
         foreach ($requiredFields as $field) {
             if (!isset($input[$field]) || empty($input[$field])) {
                 throw new Exception("Missing required field: $field");
@@ -534,7 +534,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insertResult = $G->insertShibe(
             $input['name'],
             $input['email'],
-            $input['attendance '],
             $input['country'],
             $input['github'] ?? null,
             $input['x'] ?? null,
