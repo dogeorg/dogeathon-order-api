@@ -30,6 +30,7 @@ class GigaWalletBridge {
                         `id` int(11) NOT NULL AUTO_INCREMENT,
                         `name` varchar(255) DEFAULT NULL,
                         `email` varchar(255) DEFAULT NULL,
+                        `attendance` varchar(50) DEFAULT NULL,
                         `country` varchar(255) DEFAULT NULL,                                                
                         `github` varchar(255) DEFAULT NULL,
                         `x` varchar(255) DEFAULT NULL,
@@ -50,6 +51,28 @@ class GigaWalletBridge {
                 }
             } else {
                 //echo "Much wow, Table `shibes` already exists.\n";
+            }
+        
+            // Create table if it doesn't exist
+            $sql = "CREATE TABLE IF NOT EXISTS registrations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                attendance VARCHAR(50) NOT NULL,
+                country VARCHAR(100) NOT NULL,
+                github VARCHAR(255),
+                x VARCHAR(255),
+                doge_address VARCHAR(255) NOT NULL,
+                sku VARCHAR(50) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )";
+        
+            // Execute the query
+            if ($conn->query($sql) === TRUE) {
+                //echo "Much wow, Table `registrations` created successfully.\n";
+            } else {
+                die("Much Sad, Error creating table: " . $conn->error);
             }
         
             $conn->close();
@@ -129,7 +152,7 @@ class GigaWalletBridge {
     }
 
     // Insert Shibe
-    public function insertShibe($name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress) {
+    public function insertShibe($name, $email, $attendance, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress, $attendance = null) {
         try {
             $conn = $this->getDbConnection();
             
@@ -141,6 +164,7 @@ class GigaWalletBridge {
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     name VARCHAR(255),
                     email VARCHAR(255),
+                    attendance VARCHAR(50),
                     country VARCHAR(255),
                     github VARCHAR(255),
                     x VARCHAR(255),
@@ -156,7 +180,7 @@ class GigaWalletBridge {
                 }
             }
 
-            $sql = "INSERT INTO shibes (name, email, country, github, x, dogeAddress, amount, paytoDogeAddress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO shibes (name, email, attendance, country, github, x, dogeAddress, amount, paytoDogeAddress) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             // Prepare the statement
             $stmt = $conn->prepare($sql);
@@ -165,7 +189,7 @@ class GigaWalletBridge {
             }
 
             // Bind parameters
-            $stmt->bind_param("ssssssds", $name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress);
+            $stmt->bind_param("sssssssds", $name, $email, $attendance, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress);
             
             // Execute the statement
             $result = $stmt->execute();
@@ -454,7 +478,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Received data: " . print_r($input, true));
 
         // Validate required fields
-        $requiredFields = ['name', 'email', 'country', 'dogeAddress', 'amount'];
+        $requiredFields = ['name', 'email', 'attendance ', 'country', 'dogeAddress', 'amount'];
         foreach ($requiredFields as $field) {
             if (!isset($input[$field]) || empty($input[$field])) {
                 throw new Exception("Missing required field: $field");
@@ -510,12 +534,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insertResult = $G->insertShibe(
             $input['name'],
             $input['email'],
+            $input['attendance '],
             $input['country'],
             $input['github'] ?? null,
             $input['x'] ?? null,
             $input['dogeAddress'],
             (float)$input['amount'],
-            $GigaInvoiceCreate->id
+            $GigaInvoiceCreate->id,
+            $input['attendance'] ?? null
         );
         error_log("Insert shibe result: " . ($insertResult ? 'success' : 'failed'));
 

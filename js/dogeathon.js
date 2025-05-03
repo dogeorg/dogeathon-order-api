@@ -41,6 +41,7 @@ if (typeof jQuery === 'undefined') {
             const github = $('#github-username').val().trim();
             const x = $('#x-username').val().trim();
             const dogeAddress = $('#doge-address').val().trim();
+            const attendance = $('#attendance').val();
 
             // Basic validation
             if (!name || !email || !country || !dogeAddress) {
@@ -51,6 +52,7 @@ if (typeof jQuery === 'undefined') {
             const formData = {
                 name: name,
                 email: email,
+                attendance: attendance,
                 country: country,
                 github: github || null,            
                 x: x || null,
