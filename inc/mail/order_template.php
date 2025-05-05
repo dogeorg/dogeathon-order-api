@@ -47,7 +47,9 @@ $mail_message = <<<EOD
             Please make a total payment fee of
             <b>Ð $amount</b> to the Dogecoin address <b>$paytoDogeAddress</b>
             <br><br>
-            After payment you should receive a confirmation email.
+            After payment you will receive a confirmation email.
+            <br><br>
+            Need help? Contact us at <a href="mailto:hackathon@dogecoin.org">hackathon@dogecoin.org</a>
             <br><br>
             Much Thanks!
         </div>

@@ -42,9 +42,11 @@ $mail_message = <<<EOD
         <!-- Email body with white text -->
         <div class="email-body">
             <h2>Hello $name</h2>
-            Your payment fee for the Dogeathon Portugal is confirmed.
+            Your payment for Dogeathon Portugal has been received.
             <br><br>
             Dont forget to visit <a href="https://dogecoin.com/dogeathon" target="_blank">https://dogecoin.com/dogeathon</a> for all details.
+            <br><br>
+            Need help? Contact us at <a href="mailto:hackathon@dogecoin.org">hackathon@dogecoin.org</a>
             <br><br>
             Much Thanks!
         </div>
