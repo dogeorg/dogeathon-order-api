@@ -230,6 +230,29 @@ class GigaWalletBridge {
         }
     }
 
+    // Cron send payment to Shibe
+    public function cronPayTo(){
+
+        $conn = $this->getDbConnection();
+        $verify = $conn->query("SELECT dogeAddress, PaytoDogeAddress, paid FROM shibes where paid = 0");
+
+        while ($row = $verify->fetch_array()) {
+
+            try { 
+            $GigaInvoiceGet = json_decode($this->GetInvoice($row["dogeAddress"],$row["PaytoDogeAddress"]));
+
+            }
+            catch(Exception $e){
+            //throw new Exception("Invalid URL",0,$e);
+            }
+
+            if ($GigaInvoiceGet->total_payment_confirmed){
+                $this->updateDogePaidStatus($row["PaytoDogeAddress"]);
+            }        
+        }
+    }
+
+
     // Update Dogecoin Payment on Shibe
     public function updateDogePaidStatus($paytoDogeAddress) {
         $conn = $this->getDbConnection();
@@ -239,10 +262,9 @@ class GigaWalletBridge {
     
         $stmt->execute();
         $stmt->close();
-        $conn->close();
 
         // We get the name and email to send the payment confirmation email
-        $stmt = $conn->prepare("SELECT name, email, dogeAddress FROM shibes WHERE PaytoDogeAddress = ?");
+        $stmt = $conn->prepare("SELECT name, email, dogeAddress, amount FROM shibes WHERE PaytoDogeAddress = ?");
         $stmt->bind_param("s", $paytoDogeAddress);
         $stmt->execute();
 
@@ -254,6 +276,7 @@ class GigaWalletBridge {
         $name = $record['name'];
         $email = $record['email'];
         $dogeAddress = $record['dogeAddress'];
+        $amount = $record['amount'];
 
         // Close the statement and connection
         $stmt->close();
@@ -262,7 +285,19 @@ class GigaWalletBridge {
         // We include the email payment template
         include("../mail/payment_template.php");
         
-        $this->mailx($email,$this->config["email_from"],$this->config["email_name_from"],$this->config["email_username"],$this->config["email_password"],$this->config["email_port"],$this->config["email_stmp"],$mail_subject,$mail_message);            
+        $this->mailx($email,$this->config["email_from"],$this->config["email_name_from"],$this->config["email_username"],$this->config["email_password"],$this->config["email_port"],$this->config["email_stmp"],$mail_subject,$mail_message);
+
+        try { 
+            // we send the Dogecoin payment to the Shibe using GigaWallet
+            $data = null;
+            $data["pay"][0]["amount"] = floatval($amount);
+            $data["pay"][0]["to"] = $this->config['payout_address'];
+            $data["pay"][0]["deduct_fee_percent"] = 100;
+            $this->PayTo($dogeAddress,$data);                
+        }
+        catch(Exception $e){
+              //throw new Exception("Invalid URL",0,$e);
+        } 
     }
 
     // Creates/Gets a GigaWallet Account
@@ -429,36 +464,25 @@ public function mailx($email_to,$email_from,$email_from_name,$email_username,$em
       //echo "Message has been sent";
      }
   return null;
-  }    
-/*
-    public function createOrder($name, $email, $country, $github, $dogeAddress, $amount, $paytoDogeAddress) {
-        $this->insertShibe($name, $email, $country, $github, null, $dogeAddress, $amount, $paytoDogeAddress);
-        return $this->createPayment($amount, $paytoDogeAddress);
-    }
-
-    private function createPayment($amount, $paytoDogeAddress) {
-        $conn = $this->getDbConnection();
-        $sql = "INSERT INTO payments (amount, address, status) VALUES (?, ?, 'pending')";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ds", $amount, $paytoDogeAddress);
-        $stmt->execute();
-        $paymentId = $stmt->insert_id;
-        $stmt->close();
-        $conn->close();
-        return $paymentId;
-    }
-*/        
+  }         
 
 }
 
 $G = new GigaWalletBridge($config);
 
 // Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
 
-// Handle POST requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Alternative verify payments using Cron Tasks
+if (isset($_REQUEST["cron"])) {
+
+    $G->cronPayTo();
+
+}else{
+
+    // Handle POST requests
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Get JSON input
         $rawInput = file_get_contents('php://input');
@@ -581,3 +605,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'error' => 'Only POST requests are allowed'
     ]);
 }
+};
