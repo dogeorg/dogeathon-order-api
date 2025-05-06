@@ -1,4 +1,5 @@
 <?php
+header('Access-Control-Allow-Origin: *');
 // include configurations
 include("../conf.php");
 
@@ -34,6 +35,7 @@ class GigaWalletBridge {
                         `country` varchar(255) DEFAULT NULL,                                                
                         `github` varchar(255) DEFAULT NULL,
                         `x` varchar(255) DEFAULT NULL,
+                        `tshirt` varchar(255) DEFAULT NULL,
                         `dogeAddress` varchar(255) DEFAULT NULL,
                         `amount` decimal(20,8) DEFAULT NULL,
                         `PaytoDogeAddress` varchar(255) DEFAULT NULL,
@@ -62,6 +64,7 @@ class GigaWalletBridge {
                 country VARCHAR(100) NOT NULL,
                 github VARCHAR(255),
                 x VARCHAR(255),
+                tshirt VARCHAR(255),
                 doge_address VARCHAR(255) NOT NULL,
                 sku VARCHAR(50) NOT NULL,
                 amount DECIMAL(10,2) NOT NULL,
@@ -152,7 +155,7 @@ class GigaWalletBridge {
     }
 
     // Insert Shibe
-    public function insertShibe($name, $email, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress, $attendance = null) {
+    public function insertShibe($name, $email, $country, $github, $x, $tshirt, $dogeAddress, $amount, $paytoDogeAddress, $attendance = null) {
         try {
             $conn = $this->getDbConnection();
             
@@ -168,6 +171,7 @@ class GigaWalletBridge {
                     country VARCHAR(255),
                     github VARCHAR(255),
                     x VARCHAR(255),
+                    tshirt VARCHAR(255),
                     dogeAddress VARCHAR(255),
                     amount DECIMAL(20,8),
                     paytoDogeAddress VARCHAR(255),
@@ -180,7 +184,7 @@ class GigaWalletBridge {
                 }
             }
 
-            $sql = "INSERT INTO shibes (name, email, attendance, country, github, x, dogeAddress, amount, paytoDogeAddress) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO shibes (name, email, attendance, country, github, x, tshirt, dogeAddress, amount, paytoDogeAddress) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             // Prepare the statement
             $stmt = $conn->prepare($sql);
@@ -189,7 +193,7 @@ class GigaWalletBridge {
             }
 
             // Bind parameters
-            $stmt->bind_param("sssssssds", $name, $email, $attendance, $country, $github, $x, $dogeAddress, $amount, $paytoDogeAddress);
+            $stmt->bind_param("ssssssssds", $name, $email, $attendance, $country, $github, $x, $tshirt, $dogeAddress, $amount, $paytoDogeAddress);
             
             // Execute the statement
             $result = $stmt->execute();
@@ -561,6 +565,7 @@ if (isset($_REQUEST["cron"])) {
             $input['country'],
             $input['github'] ?? null,
             $input['x'] ?? null,
+            $input['tshirt'] ?? null,
             $input['dogeAddress'],
             (float)$input['amount'],
             $GigaInvoiceCreate->id,
